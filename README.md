@@ -11,8 +11,8 @@ Lightweight library for async-await programming written in Swift.
 ## Examples
 
 - **Index**:
-	- Using `Result` and `Await`
-	- Using `Future`
+    - Using `Result` and `Await`
+    - Using `Future`
 
 ### `Result` and `Await`
 
@@ -126,18 +126,18 @@ async {
 - Getting a value or an error:
 ```swift
 self.somethingFuture().onSuccess { value in
-	print(value)
-	realFulfill()
+    print(value)
+    realFulfill()
 }.onFailure { error in
-	print(error)
+    print(error)
 }
 ```
 
 - Mapping a value:
 ```swift
 self.somethingFuture()
-	.map { $0 * 2}
-	.then { result in
-		print(result)
-	}
+    .map { $0 * 2}
+    .then { result in
+        print(result)
+    }
 ```
