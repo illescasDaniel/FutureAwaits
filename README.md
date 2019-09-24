@@ -3,15 +3,16 @@
 Lightweight library for async-await programming written in Swift.
 
 **Features:**
-- Always returns a result with either a value or a managed error
-- Possibility of running multiple functions concurrently
-- Most of the API is based on Swift 5 `Result` type instead of creating an extensive API.
-Which means:
-    - map method
-    - Get value or error
-    - Get value or nil using try?
+- Always returns a result with either a value or a managed error.
+- Possibility of running multiple functions concurrently.
+- Most of the API is based on Swift 5 `Result` type internally.
+- `Future` class to easily manage future `Result` values **and/or** work synchronously with `Result`'s and use them on async queues.
 
 ## Examples
+
+- **Index**:
+	- Using `Result` and `Await`
+	- Using `Future`
 
 ### `Result` and `Await`
 
@@ -87,7 +88,7 @@ func somethingFuture() -> Future<Int, Test> {
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
             let retrievedValue = 23
             if Bool.random() {
-                completion(.failure(Test.test))	 // ??
+                completion(.failure(Test.test))
             } else {
                 completion(.success(retrievedValue))
             }
@@ -120,4 +121,23 @@ async {
     let result2 = somethingFuture2().syncResult
     print(result1, result2)
 }
+```
+
+- Getting a value or an error:
+```swift
+self.somethingFuture().onSuccess { value in
+	print(value)
+	realFulfill()
+}.onFailure { error in
+	print(error)
+}
+```
+
+- Mapping a value:
+```swift
+self.somethingFuture()
+	.map { $0 * 2}
+	.then { result in
+		print(result)
+	}
 ```

@@ -99,7 +99,7 @@ final class FutureAwaitsTests: XCTestCase {
 				).onSuccess { results in
 					print(results)
 					realFulfill()
-				}.onError { error in
+				}.onFailure { error in
 					print(error)
 					realFulfill()
 				}
@@ -114,7 +114,7 @@ final class FutureAwaitsTests: XCTestCase {
 				).onSuccess { results in
 					print(results)
 					realFulfill()
-				}.onError { error in
+				}.onFailure { error in
 					print(error)
 					realFulfill()
 				}
@@ -130,7 +130,7 @@ final class FutureAwaitsTests: XCTestCase {
 				).onSuccess { results in
 					print(results)
 					realFulfill()
-				}.onError {
+				}.onFailure {
 					print($0)
 					realFulfill()
 				}
@@ -145,7 +145,7 @@ final class FutureAwaitsTests: XCTestCase {
 				).onSuccess { results in
 					print(results)
 					realFulfill()
-				}.onError {
+				}.onFailure {
 					print($0)
 					realFulfill()
 				}
@@ -159,7 +159,7 @@ final class FutureAwaitsTests: XCTestCase {
 				).onSuccess { results in
 					print(results)
 					realFulfill()
-				}.onError {
+				}.onFailure {
 					print($0)
 					realFulfill()
 				}
@@ -225,9 +225,42 @@ final class FutureAwaitsTests: XCTestCase {
 
 		wait(for: [expectation], timeout: 70)
 	}
+	
+	func testFuturesFeatures() {
+		
+		let expectation = XCTestExpectation(description: "testFuturesExpectation")
+		expectation.expectedFulfillmentCount = 2
+		expectation.assertForOverFulfill = true
+		
+		let locker = NSLock()
+		
+		func realFulfill() {
+			locker.lock()
+			expectation.fulfill()
+			locker.unlock()
+		}
+		
+		self.somethingFuture().onSuccess { value in
+			print(value)
+			realFulfill()
+		}.onFailure { error in
+			print(error)
+			realFulfill()
+		}
+		
+		self.somethingFuture()
+			.map { $0 * 2}
+			.then { result in
+				print(result)
+				realFulfill()
+			}
+		
+		wait(for: [expectation], timeout: 70)
+	}
 
     static var allTests = [
         ("testAwaits", testAwaits),
 		("testFutures", testFutures),
+		("testFuturesFeatures", testFuturesFeatures)
     ]
 }

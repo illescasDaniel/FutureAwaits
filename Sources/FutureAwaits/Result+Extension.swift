@@ -16,7 +16,7 @@ public extension Result {
 		return self
 	}
 	@discardableResult
-	func onError(_ completionHandler: @escaping AsyncAwait.Callback<Failure>) -> Result<Success, Failure> {
+	func onFailure(_ completionHandler: @escaping AsyncAwait.Callback<Failure>) -> Result<Success, Failure> {
 		if case .failure(let error) = self {
 			completionHandler(error)
 		}
