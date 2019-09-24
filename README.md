@@ -143,14 +143,14 @@ self.somethingFuture()
 
 - Combine multiple future values:
 ```swift
-Future.wait([
-	self.somethingFuture(), self.somethingFuture2()
+Future.combine([
+    self.somethingFuture(), self.somethingFuture2()
 ]).onSuccess { results in
-	print(results)
-	realFulfill()
+    print(results)
+    realFulfill()
 }.onFailure { error in
-	print(error)
-	realFulfill()
+    print(error)
+    realFulfill()
 }
 ```
-**Note:** you can either use `wait` or `waitOmittingErrors` (the later doesn't stop on an error, and it returns a dictionary with the results)
+**Note:** you can either use `combine` or `combineOmittingErrors` (the later doesn't stop on an error, and it returns a dictionary with the results)
