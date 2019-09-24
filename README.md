@@ -127,7 +127,6 @@ async {
 ```swift
 self.somethingFuture().onSuccess { value in
     print(value)
-    realFulfill()
 }.onFailure { error in
     print(error)
 }
