@@ -127,15 +127,15 @@ public class Future<ValueType, ErrorType: Error> {
 	
 	// MARK: - Static methods
 	
-	public static func wait(
+	public static func combine(
 		_ blocks: Future<ValueType, ErrorType>...,
 		blockQueue queue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
 	) -> Future<[ValueType], ErrorType>{
-		return wait(blocks, blockQueue: queue, timeout: timeout)
+		return combine(blocks, blockQueue: queue, timeout: timeout)
 	}
 	
-	public static func wait(
+	public static func combine(
 		_ blocks: [Future<ValueType, ErrorType>],
 		blockQueue queue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
@@ -143,6 +143,25 @@ public class Future<ValueType, ErrorType: Error> {
 		
 		return Future<[ValueType], ErrorType>(
 			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).run((blocks.map { block in { block.syncResult } }))
+		)
+	}
+	
+	public static func combineOmittingErrors(
+		_ blocks: Future<ValueType, ErrorType>...,
+		blockQueue queue: DispatchQueue? = nil,
+		timeout: DispatchTime? = nil
+	) -> Future<[Int: ValueType], ErrorType>{
+		return combineOmittingErrors(blocks, blockQueue: queue, timeout: timeout)
+	}
+	
+	public static func combineOmittingErrors(
+		_ blocks: [Future<ValueType, ErrorType>],
+		blockQueue queue: DispatchQueue? = nil,
+		timeout: DispatchTime? = nil
+	) -> Future<[Int: ValueType], ErrorType>{
+		
+		return Future<[Int: ValueType], ErrorType>(
+			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).runOmittingErrors((blocks.map { block in { block.syncResult } }))
 		)
 	}
 }

@@ -229,7 +229,7 @@ final class FutureAwaitsTests: XCTestCase {
 	func testFuturesFeatures() {
 		
 		let expectation = XCTestExpectation(description: "testFuturesExpectation")
-		expectation.expectedFulfillmentCount = 109
+		expectation.expectedFulfillmentCount = 171
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -256,8 +256,20 @@ final class FutureAwaitsTests: XCTestCase {
 			}
 		
 		for _ in 0..<107 {
-			Future.wait([
+			Future.combine([
 				self.somethingFuture(), self.somethingFuture2()
+			]).onSuccess { results in
+				print(results)
+				realFulfill()
+			}.onFailure { error in
+				print(error)
+				realFulfill()
+			}
+		}
+		
+		for _ in 0..<62 {
+			Future.combineOmittingErrors([
+				self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
 			]).onSuccess { results in
 				print(results)
 				realFulfill()
@@ -270,8 +282,8 @@ final class FutureAwaitsTests: XCTestCase {
 		wait(for: [expectation], timeout: 70)
 	}
 
-    static var allTests = [
-        ("testAwaits", testAwaits),
+	static var allTests = [
+		("testAwaits", testAwaits),
 		("testFutures", testFutures),
 		("testFuturesFeatures", testFuturesFeatures)
     ]

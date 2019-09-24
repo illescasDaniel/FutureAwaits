@@ -124,6 +124,10 @@ public struct Await<ValueType, ErrorType: Error> {
 	}
 	
 	public func runOmittingErrors(_ blocks: () -> Result<ValueType, AsyncAwait.Error<ErrorType>>...) -> Result<[Int: ValueType], AsyncAwait.Error<ErrorType>> {
+		return runOmittingErrors(blocks)
+	}
+	
+	public func runOmittingErrors(_ blocks: [() -> Result<ValueType, AsyncAwait.Error<ErrorType>>]) -> Result<[Int: ValueType], AsyncAwait.Error<ErrorType>> {
 		var results: [Int: ValueType] = [:]
 		var output: Result<[Int: ValueType], AsyncAwait.Error<ErrorType>>?
 		let (locker, locker2) = (NSLock(), NSLock())

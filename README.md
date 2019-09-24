@@ -68,7 +68,7 @@ async {
     }
 }
 ```
-**Note:** you can either use run or runOmittingErrors (the later doesn't stop on an error, and it returns a tuple with optional values)
+**Note:** you can either use `run` or `runOmittingErrors` (the later doesn't stop on an error, and it returns a tuple with optional values)
 
 **Pro tip**: use `Never` as the error type if the function never returns an error
 
@@ -140,3 +140,17 @@ self.somethingFuture()
         print(result)
     }
 ```
+
+- Combine multiple future values:
+```swift
+Future.wait([
+	self.somethingFuture(), self.somethingFuture2()
+]).onSuccess { results in
+	print(results)
+	realFulfill()
+}.onFailure { error in
+	print(error)
+	realFulfill()
+}
+```
+**Note:** you can either use `wait` or `waitOmittingErrors` (the later doesn't stop on an error, and it returns a dictionary with the results)
