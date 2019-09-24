@@ -96,6 +96,10 @@ public struct Await<ValueType, ErrorType: Error> {
 	}
 	
 	public func run(_ blocks: () -> Result<ValueType, AsyncAwait.Error<ErrorType>>...) -> Result<[ValueType], AsyncAwait.Error<ErrorType>> {
+		return run(blocks)
+	}
+	
+	public func run(_ blocks: [() -> Result<ValueType, AsyncAwait.Error<ErrorType>>]) -> Result<[ValueType], AsyncAwait.Error<ErrorType>> {
 		var results: [Int: ValueType] = [:]
 		var output: Result<[ValueType], AsyncAwait.Error<ErrorType>>?
 		let (locker, locker2) = (NSLock(), NSLock())

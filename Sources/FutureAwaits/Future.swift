@@ -5,6 +5,7 @@
 //  Created by Daniel Illescas Romero on 24/09/2019.
 //
 
+import class Foundation.NSLock
 import enum Swift.Result
 import class Dispatch.DispatchQueue
 import struct Dispatch.DispatchTime
@@ -14,16 +15,18 @@ public typealias VoidFuture<E: Error> = Future<Void, E>
 
 public class Future<ValueType, ErrorType: Error> {
 	
-	typealias FutureResult = Result<ValueType, AsyncAwait.Error<ErrorType>>
+	public typealias FutureResult = Result<ValueType, AsyncAwait.Error<ErrorType>>
 	
 	private let resultBuilder: () -> FutureResult
 	private var cachedResult: FutureResult?
+	// Locker to avoid double call on resultBuilder if calling onSuccess and onFailure very quickcly
+	private let locker = NSLock()
 	
-	init(_ resultBuilder: @escaping @autoclosure () -> FutureResult) {
+	public init(_ resultBuilder: @escaping @autoclosure () -> FutureResult) {
 		self.resultBuilder = resultBuilder
 	}
 	
-	init(
+	public init(
 		_ resultClosureBuilder: @escaping AsyncAwait.ClosureCallback<Result<ValueType, ErrorType>>,
 		blockQueue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
@@ -33,24 +36,26 @@ public class Future<ValueType, ErrorType: Error> {
 		}
 	}
 	
-	init(_ otherFuture: Future) {
+	public init(_ otherFuture: Future) {
 		self.resultBuilder = otherFuture.resultBuilder
 		self.cachedResult = otherFuture.cachedResult
 	}
 	
 	/// Must be call outside of the main thread
-	var syncResult: FutureResult {
+	public var syncResult: FutureResult {
+		locker.lock()
 		if let savedResult = cachedResult {
 			return savedResult
 		}
 		let result = resultBuilder()
 		cachedResult = result
+		locker.unlock()
 		return result
 	}
 	
 	/// The customQueue parameter MUST NOT be the `main` queue
 	@discardableResult
-	func then(customQueue: DispatchQueue? = nil, _ callback: @escaping AsyncAwait.Callback<FutureResult>) -> Future {
+	public func then(customQueue: DispatchQueue? = nil, _ callback: @escaping AsyncAwait.Callback<FutureResult>) -> Future {
 		if let queue = customQueue {
 			queue.async {
 				callback(self.syncResult)
@@ -64,15 +69,15 @@ public class Future<ValueType, ErrorType: Error> {
 	}
 	
 	/// Must be call outside of the main thread
-	func get() throws -> ValueType {
+	public func get() throws -> ValueType {
 		return try syncResult.get()
 	}
 	
-	func map<NewSuccess>(_ transform: @escaping (ValueType) -> NewSuccess) -> Future<NewSuccess, ErrorType> {
+	public func map<NewSuccess>(_ transform: @escaping (ValueType) -> NewSuccess) -> Future<NewSuccess, ErrorType> {
 		return Future<NewSuccess, ErrorType>(self.syncResult.map(transform))
 	}
 	
-	func mapError<NewFailure>(_ transform: @escaping (ErrorType) -> NewFailure) -> Future<ValueType, NewFailure> {
+	public func mapError<NewFailure>(_ transform: @escaping (ErrorType) -> NewFailure) -> Future<ValueType, NewFailure> {
 		return Future<ValueType, NewFailure>(self.syncResult.mapError { asyncAwaitError in
 			switch asyncAwaitError {
 			case .noResult:
@@ -86,31 +91,29 @@ public class Future<ValueType, ErrorType: Error> {
 	}
 	
 	@discardableResult
-	func onSuccess(customQueue: DispatchQueue? = nil, _ completionHandler: @escaping (ValueType) -> Void) -> Future {
-		self.then(customQueue: customQueue) { result in
+	public func onSuccess(customQueue: DispatchQueue? = nil, _ completionHandler: @escaping (ValueType) -> Void) -> Future {
+		return self.then(customQueue: customQueue) { result in
 			if case .success(let successValue) = result {
 				completionHandler(successValue)
 			}
 		}
-		return self
 	}
 	
 	/// Called on ANY error (time outs of the await function or custom errors)
 	@discardableResult
-	func onFailure(
+	public func onFailure(
 		customQueue: DispatchQueue? = nil, _
 		completionHandler: @escaping (AsyncAwait.Error<ErrorType>) -> Void
 	) -> Future {
-		self.then(customQueue: customQueue) { result in
+		return self.then(customQueue: customQueue) { result in
 			if case .failure(let errorValue) = result {
 				completionHandler(errorValue)
 			}
 		}
-		return self
 	}
 	
 	@discardableResult
-	func onError(
+	public func onError(
 		customQueue: DispatchQueue? = nil, _
 		completionHandler: @escaping (ErrorType) -> Void
 	) -> Future {
@@ -120,5 +123,26 @@ public class Future<ValueType, ErrorType: Error> {
 			}
 		}
 		return self
+	}
+	
+	// MARK: - Static methods
+	
+	public static func wait(
+		_ blocks: Future<ValueType, ErrorType>...,
+		blockQueue queue: DispatchQueue? = nil,
+		timeout: DispatchTime? = nil
+	) -> Future<[ValueType], ErrorType>{
+		return wait(blocks, blockQueue: queue, timeout: timeout)
+	}
+	
+	public static func wait(
+		_ blocks: [Future<ValueType, ErrorType>],
+		blockQueue queue: DispatchQueue? = nil,
+		timeout: DispatchTime? = nil
+	) -> Future<[ValueType], ErrorType>{
+		
+		return Future<[ValueType], ErrorType>(
+			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).run((blocks.map { block in { block.syncResult } }))
+		)
 	}
 }

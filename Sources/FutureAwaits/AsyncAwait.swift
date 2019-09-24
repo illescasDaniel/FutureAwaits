@@ -13,13 +13,13 @@ public enum AsyncAwait {
 		case error(E)
 	}
 	
-	static func runOnGlobalQueue(_ block: @escaping Completion) {
+	public static func runOnGlobalQueue(_ block: @escaping Completion) {
 		DispatchQueue.global().async {
 			block()
 		}
 	}
 	
-	static func runOnUIQueue(_ block: @escaping Completion) {
+	public static func runOnUIQueue(_ block: @escaping Completion) {
 		DispatchQueue.main.async {
 			block()
 		}

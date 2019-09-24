@@ -29,7 +29,7 @@ final class FutureAwaitsTests: XCTestCase {
 			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
 				let retrievedValue = 23
 				if Bool.random() {
-					completion(.failure(Test.test))	 // ??
+					completion(.failure(Test.test))
 				} else {
 					completion(.success(retrievedValue))
 				}
@@ -40,9 +40,9 @@ final class FutureAwaitsTests: XCTestCase {
 	func somethingFuture2() -> Future<Int, Test> {
 		return Future(await { completion in
 			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
-				let retrievedValue = 23
+				let retrievedValue = 30
 				if Bool.random() {
-					completion(.failure(Test.test))	 // ??
+					completion(.failure(Test.test))
 				} else {
 					completion(.success(retrievedValue))
 				}
@@ -229,7 +229,7 @@ final class FutureAwaitsTests: XCTestCase {
 	func testFuturesFeatures() {
 		
 		let expectation = XCTestExpectation(description: "testFuturesExpectation")
-		expectation.expectedFulfillmentCount = 2
+		expectation.expectedFulfillmentCount = 109
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -254,6 +254,18 @@ final class FutureAwaitsTests: XCTestCase {
 				print(result)
 				realFulfill()
 			}
+		
+		for _ in 0..<107 {
+			Future.wait([
+				self.somethingFuture(), self.somethingFuture2()
+			]).onSuccess { results in
+				print(results)
+				realFulfill()
+			}.onFailure { error in
+				print(error)
+				realFulfill()
+			}
+		}
 		
 		wait(for: [expectation], timeout: 70)
 	}
