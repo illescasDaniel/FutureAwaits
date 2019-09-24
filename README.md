@@ -5,7 +5,7 @@ Lightweight library for async-await programming written in Swift.
 **Features:**
 - Always returns a result with either a value or a managed error
 - Possibility of running multiple functions concurrently
-- Most of the API is based on Swift 5 Result type instead of creating an extensive API.
+- Most of the API is based on Swift 5 `Result` type instead of creating an extensive API.
 Which means:
     - map method
     - Get value or error
@@ -13,7 +13,8 @@ Which means:
 
 ## Examples
 
-### Result and Await
+### `Result` and `Await`
+
 - Creating a synchrounous `Result` with the `await` function (which is a helper function for the `Await` struct):
 ```swift
 func somethingAsync() -> Result<Int, AsyncAwait.Error<Test>> {
@@ -29,6 +30,7 @@ func somethingAsync() -> Result<Int, AsyncAwait.Error<Test>> {
     }
 }
 ```
+
 - Getting the value of a function that uses `Await` with the `async` function:
 ```swift
 async {
@@ -37,8 +39,7 @@ async {
 }
 ```
 
-- Running multiple async functions concurrently using the same `Result` type:
-**Note:** you can either use run or runOmittingErrors (the later doesn't stop on an error, and it returns a dictionary with the results)
+- Running multiple async functions concurrently using the same `Result` type.
 ```swift
 async {
     Await.default.run(
@@ -51,8 +52,9 @@ async {
     }
 }
 ```
-- Running multiple async functions concurrently using a different `Result` type:
-**Note:** you can either use run or runOmittingErrors (the later doesn't stop on an error, and it returns a tuple with optional values)
+**Note:** you can either use `run` or `runOmittingErrors` (the later doesn't stop on an error, and it returns a dictionary with the results)
+
+- Running multiple async functions concurrently using a different `Result` type.
 ```swift
 async {
     MultiAwait.default.run(
@@ -65,10 +67,11 @@ async {
     }
 }
 ```
+**Note:** you can either use run or runOmittingErrors (the later doesn't stop on an error, and it returns a tuple with optional values)
 
 **Pro tip**: use `Never` as the error type if the function never returns an error
 
---
+---
 
 ### Future
 
