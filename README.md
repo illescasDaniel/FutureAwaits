@@ -132,11 +132,11 @@ async {
     }
 }
 Futures.wait((
-	self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
+    self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
 )).onSuccess { (value1, value2, value3) in
-	print(value1, value2, value3)
+    print(value1, value2, value3)
 }.onFailure { error in
-	print(error.localizedDescription)
+    print(error.localizedDescription)
 }
 ```
 
