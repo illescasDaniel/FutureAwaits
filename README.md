@@ -147,10 +147,8 @@ Future.combine([
     self.somethingFuture(), self.somethingFuture2()
 ]).onSuccess { results in
     print(results)
-    realFulfill()
 }.onFailure { error in
     print(error)
-    realFulfill()
 }
 ```
 **Note:** you can either use `combine` or `combineOmittingErrors` (the later doesn't stop on an error, and it returns a dictionary with the results)
