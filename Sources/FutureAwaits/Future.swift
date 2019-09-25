@@ -117,12 +117,11 @@ public class Future<ValueType, ErrorType: Error> {
 		customQueue: DispatchQueue? = nil, _
 		completionHandler: @escaping (ErrorType) -> Void
 	) -> Future {
-		self.then(customQueue: customQueue) { result in
+		return self.then(customQueue: customQueue) { result in
 			if case .failure(let errorValue) = result, case .error(let error) = errorValue {
 				completionHandler(error)
 			}
 		}
-		return self
 	}
 	
 	// MARK: - Static methods
@@ -140,7 +139,6 @@ public class Future<ValueType, ErrorType: Error> {
 		blockQueue queue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
 	) -> Future<[ValueType], ErrorType>{
-		
 		return Future<[ValueType], ErrorType>(
 			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).run((blocks.map { block in { block.syncResult } }))
 		)
@@ -159,7 +157,6 @@ public class Future<ValueType, ErrorType: Error> {
 		blockQueue queue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
 	) -> Future<[Int: ValueType], ErrorType>{
-		
 		return Future<[Int: ValueType], ErrorType>(
 			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).runOmittingErrors((blocks.map { block in { block.syncResult } }))
 		)

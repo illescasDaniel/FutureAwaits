@@ -3,8 +3,11 @@ import XCTest
 
 final class FutureAwaitsTests: XCTestCase {
 	
-	enum Test: Error {
+	enum Test: Error, LocalizedError {
 		case test
+		var errorDescription: String? {
+			return NSLocalizedString("error here!", comment: "")
+		}
 	}
 	
 	// Result with Await
@@ -172,7 +175,7 @@ final class FutureAwaitsTests: XCTestCase {
 	func testFutures() {
 		
 		let expectation = XCTestExpectation(description: "testFuturesExpectation")
-		expectation.expectedFulfillmentCount = 9
+		expectation.expectedFulfillmentCount = 10
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -213,6 +216,16 @@ final class FutureAwaitsTests: XCTestCase {
 			} catch {
 				print(error)
 			}
+			realFulfill()
+		}
+		
+		Futures.wait((
+			self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
+		)).onSuccess { (value1, value2, value3) in
+			print(value1, value2, value3)
+			realFulfill()
+		}.onFailure { error in
+			print(error.localizedDescription)
 			realFulfill()
 		}
 

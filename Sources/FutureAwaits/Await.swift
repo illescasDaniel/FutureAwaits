@@ -65,7 +65,7 @@ public struct Await<ValueType, ErrorType: Error> {
 	}
 	
 	// TODO: refactor to use `run` method of viceversa
-	fileprivate func _run(_ block: @escaping AsyncAwait.ClosureCallback<Result<ValueType, AsyncAwait.Error<ErrorType>>>) -> Result<ValueType, AsyncAwait.Error<ErrorType>> {
+	internal func _run(_ block: @escaping AsyncAwait.ClosureCallback<Result<ValueType, AsyncAwait.Error<ErrorType>>>) -> Result<ValueType, AsyncAwait.Error<ErrorType>> {
 		
 		let dispatchGroup = DispatchGroup()
 		dispatchGroup.enter()

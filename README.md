@@ -121,6 +121,23 @@ async {
     let result2 = somethingFuture2().syncResult
     print(result1, result2)
 }
+async {
+    do {
+        let value1 = try self.somethingFuture().get()
+        let value2 = try self.somethingFuture2().get()
+        let value3 = try self.somethingFuture3().get()
+        print(value1, value2, value3)
+    } catch {
+        print(error)
+    }
+}
+Futures.wait((
+	self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
+)).onSuccess { (value1, value2, value3) in
+	print(value1, value2, value3)
+}.onFailure { error in
+	print(error.localizedDescription)
+}
 ```
 
 - Getting a value or an error:
