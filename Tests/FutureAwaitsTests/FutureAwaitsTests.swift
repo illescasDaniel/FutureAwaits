@@ -9,12 +9,18 @@ final class FutureAwaitsTests: XCTestCase {
 			return NSLocalizedString("error here!", comment: "")
 		}
 	}
+	enum Other: Error, LocalizedError {
+		case test
+		var errorDescription: String? {
+			return NSLocalizedString("error here other!", comment: "")
+		}
+	}
 	
 	// Result with Await
 	
 	func somethingAsync() -> Result<Int, AsyncAwait.Error<Test>> {
 		return await { completion in
-			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
+			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds( Int.random(in: 50...1432) )) {
 				let retrievedValue = 23
 				if Bool.random() {
 					completion(.failure(Test.test))	 // ??
@@ -29,7 +35,7 @@ final class FutureAwaitsTests: XCTestCase {
 
 	func somethingFuture() -> Future<Int, Test> {
 		return Future({ completion in
-			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
+			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds( Int.random(in: 71...843) )) {
 				let retrievedValue = 23
 				if Bool.random() {
 					completion(.failure(Test.test))
@@ -42,10 +48,23 @@ final class FutureAwaitsTests: XCTestCase {
 
 	func somethingFuture2() -> Future<Int, Test> {
 		return Future(await { completion in
-			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
+			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds( Int.random(in: 2...1031) )) {
 				let retrievedValue = 30
 				if Bool.random() {
 					completion(.failure(Test.test))
+				} else {
+					completion(.success(retrievedValue))
+				}
+			}
+		})
+	}
+	
+	func somethingFuture10(value: Int) -> Future<Double, Other> {
+		return Future(await { completion in
+			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds( Int.random(in: 30...2034) )) {
+				let retrievedValue: Double = Double(value) + 19
+				if Bool.random() {
+					completion(.failure(Other.test))
 				} else {
 					completion(.success(retrievedValue))
 				}
@@ -82,8 +101,10 @@ final class FutureAwaitsTests: XCTestCase {
 	
 	func testAwaits() {
 		
+		let expectedCount = 507
+		var realCount = 0
 		let expectation = XCTestExpectation(description: "testAwaitsExpectation")
-		expectation.expectedFulfillmentCount = 507
+		expectation.expectedFulfillmentCount = expectedCount
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -92,6 +113,7 @@ final class FutureAwaitsTests: XCTestCase {
 			locker.lock()
 			expectation.fulfill()
 			locker.unlock()
+			realCount += 1
 		}
 		
 		async {
@@ -169,13 +191,17 @@ final class FutureAwaitsTests: XCTestCase {
 			}
 		}
 		
-		wait(for: [expectation], timeout: 70)
+		wait(for: [expectation], timeout: 1000)
+		
+		XCTAssertEqual(realCount, expectedCount, "Some awaits didn't fulfill")
 	}
 	
 	func testFutures() {
 		
+		let expectedCount = 25
+		var realCount = 0
 		let expectation = XCTestExpectation(description: "testFuturesExpectation")
-		expectation.expectedFulfillmentCount = 10
+		expectation.expectedFulfillmentCount = expectedCount
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -184,6 +210,7 @@ final class FutureAwaitsTests: XCTestCase {
 			locker.lock()
 			expectation.fulfill()
 			locker.unlock()
+			realCount += 1
 		}
 		
 		self.somethingFuture().then {
@@ -219,14 +246,16 @@ final class FutureAwaitsTests: XCTestCase {
 			realFulfill()
 		}
 		
-		Futures.wait((
-			self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
-		)).onSuccess { (value1, value2, value3) in
-			print(value1, value2, value3)
-			realFulfill()
-		}.onFailure { error in
-			print(error.localizedDescription)
-			realFulfill()
+		for _ in 0..<16 {
+			Futures.wait(
+				self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
+			).onSuccess { (value1, value2, value3) in
+				print(value1, value2, value3)
+				realFulfill()
+			}.onFailure { error in
+				print(error.localizedDescription)
+				realFulfill()
+			}
 		}
 
 		self.somethingFuture3().then {
@@ -249,13 +278,17 @@ final class FutureAwaitsTests: XCTestCase {
 			realFulfill()
 		}
 
-		wait(for: [expectation], timeout: 70)
+		wait(for: [expectation], timeout: 1000)
+		
+		XCTAssertEqual(realCount, expectedCount, "Some futures didn't fulfill")
 	}
 	
 	func testFuturesFeatures() {
 		
+		let expectedCount = 392
+		var realCount = 0
 		let expectation = XCTestExpectation(description: "testFuturesExpectation")
-		expectation.expectedFulfillmentCount = 171
+		expectation.expectedFulfillmentCount = expectedCount
 		expectation.assertForOverFulfill = true
 		
 		let locker = NSLock()
@@ -264,6 +297,7 @@ final class FutureAwaitsTests: XCTestCase {
 			locker.lock()
 			expectation.fulfill()
 			locker.unlock()
+			realCount += 1
 		}
 		
 		self.somethingFuture().onSuccess { value in
@@ -275,14 +309,26 @@ final class FutureAwaitsTests: XCTestCase {
 		}
 		
 		self.somethingFuture()
-			.map { $0 * 2}
+			.map { $0 * 2 }
 			.then { result in
 				print(result)
 				realFulfill()
 			}
 		
+		for i in 0..<52 {
+			self.somethingFuture()
+				.flatMap { self.somethingFuture10(value: $0) }
+				.map { $0 * Double(i) }
+				.flatMap { self.somethingFuture10(value: Int($0)) }
+				.then { result in
+					print(result)
+					realFulfill()
+				}
+		}
+		
 		for _ in 0..<107 {
-			Future.combine([
+			
+			Futures.combine([
 				self.somethingFuture(), self.somethingFuture2()
 			]).onSuccess { results in
 				print(results)
@@ -291,10 +337,20 @@ final class FutureAwaitsTests: XCTestCase {
 				print(error)
 				realFulfill()
 			}
+			
+			Futures.combine(
+				self.somethingFuture(), self.somethingFuture10(value: 1)
+			).onSuccess { (result1, result2) in
+				print(result1, result2)
+				realFulfill()
+			}.onFailure { error in
+				print(error)
+				realFulfill()
+			}
 		}
 		
 		for _ in 0..<62 {
-			Future.combineOmittingErrors([
+			Futures.combineOmittingErrors([
 				self.somethingFuture(), self.somethingFuture2(), self.somethingFuture3()
 			]).onSuccess { results in
 				print(results)
@@ -303,9 +359,21 @@ final class FutureAwaitsTests: XCTestCase {
 				print(error)
 				realFulfill()
 			}
+			
+			Futures.combineOmittingErrors(
+				self.somethingFuture(), self.somethingFuture10(value: 1)
+			).onSuccess { (result1, result2) in
+				print(result1 ?? "nil", result2 ?? "nil")
+				realFulfill()
+			}.onFailure { error in
+				print(error)
+				realFulfill()
+			}
 		}
 		
-		wait(for: [expectation], timeout: 70)
+		wait(for: [expectation], timeout: 1000)
+		
+		XCTAssertEqual(realCount, expectedCount, "Some futures (2) didn't fulfill")
 	}
 
 	static var allTests = [

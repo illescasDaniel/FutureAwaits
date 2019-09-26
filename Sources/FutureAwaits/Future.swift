@@ -77,6 +77,41 @@ public class Future<ValueType, ErrorType: Error> {
 		return Future<NewSuccess, ErrorType>(self.syncResult.map(transform))
 	}
 	
+	public func flatMap<NewSuccess>(_ transform: @escaping (ValueType) -> Future<NewSuccess, ErrorType>) -> Future<NewSuccess, ErrorType> {
+		return Future<NewSuccess, ErrorType>(self.syncResult.flatMap { transform($0).syncResult})
+	}
+	
+	public func flatMap<NewSuccess, NewFailure>(_ transform: @escaping (ValueType) -> Future<NewSuccess, NewFailure>) -> Future<NewSuccess, Error> {
+		return Future<NewSuccess, Error>({ completion in
+			switch self.syncResult {
+			case .success(let value):
+				let result = transform(value).syncResult
+				switch result {
+				case .success(let value2):
+					completion(.success(value2))
+				case .failure(let error1):
+					switch error1 {
+					case .error(let error2):
+						completion(.failure(error2))
+					case .noResult:
+						completion(.failure(AsyncAwait.Error<Error>.noResult))
+					case .timedOut:
+						completion(.failure(AsyncAwait.Error<Error>.timedOut))
+					}
+				}
+			case .failure(let error1):
+				switch error1 {
+				case .error(let error2):
+					completion(.failure(error2))
+				case .noResult:
+					completion(.failure(AsyncAwait.Error<Error>.noResult))
+				case .timedOut:
+					completion(.failure(AsyncAwait.Error<Error>.timedOut))
+				}
+			}
+		})
+	}
+	
 	public func mapError<NewFailure>(_ transform: @escaping (ErrorType) -> NewFailure) -> Future<ValueType, NewFailure> {
 		return Future<ValueType, NewFailure>(self.syncResult.mapError { asyncAwaitError in
 			switch asyncAwaitError {
@@ -122,43 +157,5 @@ public class Future<ValueType, ErrorType: Error> {
 				completionHandler(error)
 			}
 		}
-	}
-	
-	// MARK: - Static methods
-	
-	public static func combine(
-		_ blocks: Future<ValueType, ErrorType>...,
-		blockQueue queue: DispatchQueue? = nil,
-		timeout: DispatchTime? = nil
-	) -> Future<[ValueType], ErrorType>{
-		return combine(blocks, blockQueue: queue, timeout: timeout)
-	}
-	
-	public static func combine(
-		_ blocks: [Future<ValueType, ErrorType>],
-		blockQueue queue: DispatchQueue? = nil,
-		timeout: DispatchTime? = nil
-	) -> Future<[ValueType], ErrorType>{
-		return Future<[ValueType], ErrorType>(
-			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).run((blocks.map { block in { block.syncResult } }))
-		)
-	}
-	
-	public static func combineOmittingErrors(
-		_ blocks: Future<ValueType, ErrorType>...,
-		blockQueue queue: DispatchQueue? = nil,
-		timeout: DispatchTime? = nil
-	) -> Future<[Int: ValueType], ErrorType>{
-		return combineOmittingErrors(blocks, blockQueue: queue, timeout: timeout)
-	}
-	
-	public static func combineOmittingErrors(
-		_ blocks: [Future<ValueType, ErrorType>],
-		blockQueue queue: DispatchQueue? = nil,
-		timeout: DispatchTime? = nil
-	) -> Future<[Int: ValueType], ErrorType>{
-		return Future<[Int: ValueType], ErrorType>(
-			Await<ValueType, ErrorType>(blockQueue: queue ?? .global()).runOmittingErrors((blocks.map { block in { block.syncResult } }))
-		)
 	}
 }
