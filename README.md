@@ -1,6 +1,6 @@
 # FutureAwaits
 
-Lightweight library for async-await programming written in Swift.
+Lightweight library for async-await programming with `Future`s or `Await` written in Swift.
 
 Follow the **upcoming updates [here](https://trello.com/b/uVivmHBM)**:
 
@@ -65,7 +65,7 @@ self.somethingFuture().onSuccess { value in
 }
 ```
 
-- Getting the synchrounous value of some `Future`'s:
+- Getting the values of some `Future`'s:
 (This waits one by one all the futures, for a more optimized version see `Futures.combine` below)
 ```swift
 Futures.wait(
