@@ -23,20 +23,28 @@ SOFTWARE.
 */
 
 import enum Swift.Result
+import class Dispatch.DispatchQueue
+import struct Dispatch.DispatchTime
 
-public extension Result {
-	@discardableResult
-	func onSuccess(_ completionHandler: @escaping AsyncAwait.Callback<Success>) -> Result<Success, Failure> {
-		if case .success(let value) = self {
-			completionHandler(value)
-		}
-		return self
-	}
-	@discardableResult
-	func onFailure(_ completionHandler: @escaping AsyncAwait.Callback<Failure>) -> Result<Success, Failure> {
-		if case .failure(let error) = self {
-			completionHandler(error)
-		}
-		return self
+typealias AwaitError = AsyncAwait.Error
+
+public func async(_ block: @escaping AsyncAwait.Completion) {
+	return AsyncAwait.runOnGlobalQueue(block)
+}
+public func asyncUI(_ block: @escaping AsyncAwait.Completion) {
+	return AsyncAwait.runOnUIQueue(block)
+}
+
+public func await<Value, E>(
+	queue: DispatchQueue? = nil,
+	timeout: DispatchTime? = nil,
+	_ block: @escaping AsyncAwait.ClosureCallback<Result<Value, E>>
+) -> Result<Value, AsyncAwait.Error<E>> {
+	return Await<Value,E>(blockQueue: queue, timeout: timeout).run(block)
+}
+
+public func concurrentlyPerform(_ blocks: () -> Void ...) {
+	DispatchQueue.concurrentPerform(iterations: blocks.count) { index in
+		blocks[index]()
 	}
 }

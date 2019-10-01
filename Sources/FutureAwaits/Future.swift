@@ -1,9 +1,26 @@
-//
-//  File.swift
-//  
-//
-//  Created by Daniel Illescas Romero on 24/09/2019.
-//
+/*
+The MIT License (MIT)
+
+Copyright (c) 2019 Daniel Illescas Romero <https://github.com/illescasDaniel/FutureAwaits>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 import class Foundation.NSLock
 import enum Swift.Result
@@ -14,6 +31,8 @@ public typealias NaiveFuture<T> = Future<T, Never>
 public typealias VoidFuture<E: Error> = Future<Void, E>
 
 public class Future<ValueType, ErrorType: Error> {
+
+	private let _futureQueue = DispatchQueue(label: "_futureQueue_", qos: .utility)
 	
 	public typealias FutureResult = Result<ValueType, AsyncAwait.Error<ErrorType>>
 	
@@ -43,27 +62,18 @@ public class Future<ValueType, ErrorType: Error> {
 	
 	/// Must be call outside of the main thread
 	public var syncResult: FutureResult {
-		locker.lock()
 		if let savedResult = cachedResult {
 			return savedResult
 		}
 		let result = resultBuilder()
 		cachedResult = result
-		locker.unlock()
 		return result
 	}
-	
-	/// The customQueue parameter MUST NOT be the `main` queue
+
 	@discardableResult
-	public func then(customQueue: DispatchQueue? = nil, _ callback: @escaping AsyncAwait.Callback<FutureResult>) -> Future {
-		if let queue = customQueue {
-			queue.async {
-				callback(self.syncResult)
-			}
-		} else {
-			AsyncAwait.runOnGlobalQueue {
-				callback(self.syncResult)
-			}
+	public func then(_ callback: @escaping AsyncAwait.Callback<FutureResult>) -> Future {
+		_futureQueue.async {
+			callback(self.syncResult)
 		}
 		return self
 	}
@@ -126,8 +136,8 @@ public class Future<ValueType, ErrorType: Error> {
 	}
 	
 	@discardableResult
-	public func onSuccess(customQueue: DispatchQueue? = nil, _ completionHandler: @escaping (ValueType) -> Void) -> Future {
-		return self.then(customQueue: customQueue) { result in
+	public func onSuccess(_ completionHandler: @escaping (ValueType) -> Void) -> Future {
+		return self.then { result in
 			if case .success(let successValue) = result {
 				completionHandler(successValue)
 			}
@@ -136,11 +146,10 @@ public class Future<ValueType, ErrorType: Error> {
 	
 	/// Called on ANY error (time outs of the await function or custom errors)
 	@discardableResult
-	public func onFailure(
-		customQueue: DispatchQueue? = nil, _
+	public func onFailure(_
 		completionHandler: @escaping (AsyncAwait.Error<ErrorType>) -> Void
 	) -> Future {
-		return self.then(customQueue: customQueue) { result in
+		return self.then { result in
 			if case .failure(let errorValue) = result {
 				completionHandler(errorValue)
 			}
@@ -148,11 +157,10 @@ public class Future<ValueType, ErrorType: Error> {
 	}
 	
 	@discardableResult
-	public func onError(
-		customQueue: DispatchQueue? = nil, _
+	public func onError(_
 		completionHandler: @escaping (ErrorType) -> Void
 	) -> Future {
-		return self.then(customQueue: customQueue) { result in
+		return self.then { result in
 			if case .failure(let errorValue) = result, case .error(let error) = errorValue {
 				completionHandler(error)
 			}
