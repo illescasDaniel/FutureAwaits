@@ -18,7 +18,7 @@ final class FutureAwaitsTests: XCTestCase {
 	
 	// Result with Await
 
-	func somethingAsync() -> Result<Int, AsyncAwait.Error<Test>> {
+	func somethingAsync() -> Result<Int, Test> {
 		return await { completion in
 			DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds( Int.random(in: 50...1432) )) {
 				let retrievedValue = 23
@@ -76,7 +76,7 @@ final class FutureAwaitsTests: XCTestCase {
 		return Future(somethingFuture2())
 	}
 
-	func somethingFuture4() -> Future<(Int, Int), Error> {
+	func somethingFuture4() -> Future<(Int, Int), AsyncAwait.Failure> {
 		return Future(MultiAwait.default.run(
 			self.somethingAsync(),
 			self.somethingAsync()
@@ -409,7 +409,7 @@ final class FutureAwaitsTests: XCTestCase {
 			}
 		})
 	}
-	func _awaitTest() -> Result<Int, AsyncAwait.Error<Never>> {
+	func _awaitTest() -> Result<Int, Never> {
 		return await { completion in
 			self._getValue { value in
 				completion(.success(value))

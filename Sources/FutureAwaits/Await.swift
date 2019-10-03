@@ -29,6 +29,8 @@ import class Dispatch.DispatchQueue
 import struct Dispatch.DispatchTime
 
 public struct Await<ValueType, ErrorType: Error> {
+
+	public typealias AwaitResult = Result<ValueType, ErrorType>
 	
 	public static var `default`: Await<ValueType, ErrorType> {
 		return Await()
@@ -41,18 +43,18 @@ public struct Await<ValueType, ErrorType: Error> {
 		self.queue = queue
 		self.timeout = timeout
 	}
-	
-	public func run(_ block: @escaping AsyncAwait.ClosureCallback<Result<ValueType, ErrorType>>) -> Result<ValueType, AsyncAwait.Error<ErrorType>> {
-		
+
+	public func run(_ block: @escaping AsyncAwait.ClosureCallback<AwaitResult>) -> AwaitResult {
+
 		let dispatchGroup = DispatchGroup()
 		dispatchGroup.enter()
-		
-		var result: Result<ValueType, ErrorType>?
-		let resultF: AsyncAwait.Callback<Result<ValueType, ErrorType>> = { r in
+
+		var result: AwaitResult?
+		let resultF: AsyncAwait.Callback<AwaitResult> = { r in
 			result = r
 			dispatchGroup.leave()
 		}
-		
+
 		if let queue = self.queue {
 			queue.async {
 				block(resultF)
@@ -60,65 +62,23 @@ public struct Await<ValueType, ErrorType: Error> {
 		} else {
 			block(resultF)
 		}
-		
-		if let timeout = self.timeout {
-			if dispatchGroup.wait(timeout: timeout)	== .timedOut {
-				return .failure(.timedOut)
-			}
-		} else {
-			dispatchGroup.wait()
-		}
-		
+
+		dispatchGroup.wait()
+
 		if let validResult = result {
-			switch validResult {
-			case .success(let resultValue):
-				return .success(resultValue)
-			case .failure(let resultError):
-				return .failure(.error(resultError))
-			}
+			return validResult
 		}
-		
-		return .failure(.noResult)
+
+		fatalError()
 	}
-	
-	// TODO: refactor to use `run` method of viceversa
-	internal func _run(_ block: @escaping AsyncAwait.ClosureCallback<Result<ValueType, AsyncAwait.Error<ErrorType>>>) -> Result<ValueType, AsyncAwait.Error<ErrorType>> {
-		
-		let dispatchGroup = DispatchGroup()
-		dispatchGroup.enter()
-		
-		var result: Result<ValueType, AsyncAwait.Error<ErrorType>>?
-		let resultF: AsyncAwait.Callback<Result<ValueType, AsyncAwait.Error<ErrorType>>> = { r in
-			result = r
-			dispatchGroup.leave()
-		}
-		
-		if let queue = queue {
-			queue.async {
-				block(resultF)
-			}
-		} else {
-			block(resultF)
-		}
-		
-		if let timeout = timeout {
-			if dispatchGroup.wait(timeout: timeout)	== .timedOut {
-				return .failure(.timedOut)
-			}
-		} else {
-			dispatchGroup.wait()
-		}
-		
-		return result ?? .failure(.noResult)
-	}
-	
-	public func run(_ blocks: () -> Result<ValueType, AsyncAwait.Error<ErrorType>>...) -> Result<[ValueType], AsyncAwait.Error<ErrorType>> {
+
+	public func run(_ blocks: () -> Result<ValueType, ErrorType>...) -> Result<[ValueType], ErrorType> {
 		return run(blocks)
 	}
 	
-	public func run(_ blocks: [() -> Result<ValueType, AsyncAwait.Error<ErrorType>>]) -> Result<[ValueType], AsyncAwait.Error<ErrorType>> {
+	public func run(_ blocks: [() -> Result<ValueType, ErrorType>]) -> Result<[ValueType], ErrorType> {
 		var results: [Int: ValueType] = [:]
-		var output: Result<[ValueType], AsyncAwait.Error<ErrorType>>?
+		var output: Result<[ValueType], ErrorType>?
 		let (locker, locker2) = (NSLock(), NSLock())
 		DispatchQueue.concurrentPerform(iterations: blocks.count) { index in
 			guard output == nil else { return }
@@ -130,23 +90,23 @@ public struct Await<ValueType, ErrorType: Error> {
 				locker.unlock()
 			case .failure(let error):
 				locker2.lock()
-				output = Result.failure(error)
+				output = .failure(error)
 				locker2.unlock()
 			}
 		}
 		if output == nil {
 			output = Result.success(results.sorted(by: { lhs, rhs in lhs.key < rhs.key}).map { $1 })
 		}
-		return output ?? .failure(.noResult)
+		return output ?? .success([])
 	}
 	
-	public func runOmittingErrors(_ blocks: () -> Result<ValueType, AsyncAwait.Error<ErrorType>>...) -> Result<[Int: ValueType], AsyncAwait.Error<ErrorType>> {
+	public func runOmittingErrors(_ blocks: () -> Result<ValueType, ErrorType>...) -> Result<[Int: ValueType], ErrorType> {
 		return runOmittingErrors(blocks)
 	}
 	
-	public func runOmittingErrors(_ blocks: [() -> Result<ValueType, AsyncAwait.Error<ErrorType>>]) -> Result<[Int: ValueType], AsyncAwait.Error<ErrorType>> {
+	public func runOmittingErrors(_ blocks: [() -> Result<ValueType, ErrorType>]) -> Result<[Int: ValueType], ErrorType> {
 		var results: [Int: ValueType] = [:]
-		var output: Result<[Int: ValueType], AsyncAwait.Error<ErrorType>>?
+		var output: Result<[Int: ValueType], ErrorType>?
 		let (locker, locker2) = (NSLock(), NSLock())
 		DispatchQueue.concurrentPerform(iterations: blocks.count) { index in
 			guard output == nil else { return }
@@ -158,13 +118,13 @@ public struct Await<ValueType, ErrorType: Error> {
 				locker.unlock()
 			case .failure(let error):
 				locker2.lock()
-				output = Result.failure(error)
+				output = .failure(error)
 				locker2.unlock()
 			}
 		}
 		if !results.isEmpty {
 			output = Result.success(results)
 		}
-		return output ?? .failure(.noResult)
+		return output ?? .success([:])
 	}
 }

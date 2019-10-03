@@ -138,8 +138,8 @@ public struct Futures {
 		_ future0: Future<T,E>, _ future1: Future<T1,E1>,
 		blockQueue queue: DispatchQueue? = nil,
 		timeout: DispatchTime? = nil
-	) -> Future<(T,T1), Error> {
-		return Future<(T,T1), Error>(
+	) -> Future<(T,T1), AsyncAwait.Failure> {
+		return Future<(T,T1), AsyncAwait.Failure>(
 			MultiAwait(blockQueue: queue ?? .global()).run(future0.syncResult, future1.syncResult)
 		)
 	}

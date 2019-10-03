@@ -42,13 +42,13 @@ public struct MultiAwait {
 	}
 	
 	public func run<T,U, E,EE>(
-		_ block0: @escaping @autoclosure () -> Result<T, AsyncAwait.Error<E>>,
-		_ block1: @escaping @autoclosure () -> Result<U, AsyncAwait.Error<EE>>,
+		_ block0: @escaping @autoclosure () -> Result<T, E>,
+		_ block1: @escaping @autoclosure () -> Result<U, EE>,
 		timeout: DispatchTime? = nil
-		) -> Result<(T,U), AsyncAwait.Error<Error>> {
+	) -> Result<(T,U), AsyncAwait.Failure> {
 	
 		var results: (T?, U?) = (nil, nil)
-		var output: Result<(T,U), AsyncAwait.Error<Error>>?
+		var output: Result<(T,U), AsyncAwait.Failure>?
 		let (locker, locker2) = (NSLock(), NSLock())
 		
 		DispatchQueue.concurrentPerform(iterations: 2) { index in
@@ -69,7 +69,7 @@ public struct MultiAwait {
 				}
 			} catch {
 				locker2.lock()
-				output = .failure(.error(error))
+				output = .failure(.other(error))
 				locker2.unlock()
 			}
 		}
@@ -78,17 +78,17 @@ public struct MultiAwait {
 			output = .success( (result0, result1) )
 		}
 		
-		return output ?? Result.failure(.noResult)
+		return output ?? .failure(.noResult)
 	}
 	
 	public func runOmittingErrors<T,U, E,EE>(
-		_ block0: @escaping @autoclosure () -> Result<T, AsyncAwait.Error<E>>,
-		_ block1: @escaping @autoclosure () -> Result<U, AsyncAwait.Error<EE>>,
+		_ block0: @escaping @autoclosure () -> Result<T, E>,
+		_ block1: @escaping @autoclosure () -> Result<U, EE>,
 		timeout: DispatchTime? = nil
-		) -> Result<(T?,U?), AsyncAwait.Error<Error>> {
+		) -> Result<(T?,U?), Error> {
 	
 		var results: (T?, U?) = (nil, nil)
-		var output: Result<(T?,U?), AsyncAwait.Error<Error>>?
+		var output: Result<(T?,U?), Error>?
 		let (locker, locker2) = (NSLock(), NSLock())
 		
 		DispatchQueue.concurrentPerform(iterations: 2) { index in
@@ -108,7 +108,7 @@ public struct MultiAwait {
 				}
 			} catch {
 				locker2.lock()
-				output = .failure(.error(error))
+				output = .failure(error)
 				locker2.unlock()
 			}
 		}
@@ -117,7 +117,7 @@ public struct MultiAwait {
 			output = Result.success(results)
 		}
 
-		return output ?? Result.failure(.noResult)
+		return output ?? .success( (nil, nil) )
 	}
 	
 	// ...

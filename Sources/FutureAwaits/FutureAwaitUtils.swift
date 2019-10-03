@@ -26,8 +26,6 @@ import enum Swift.Result
 import class Dispatch.DispatchQueue
 import struct Dispatch.DispatchTime
 
-typealias AwaitError = AsyncAwait.Error
-
 public func async(_ block: @escaping AsyncAwait.Completion) {
 	return AsyncAwait.runOnGlobalQueue(block)
 }
@@ -39,7 +37,7 @@ public func await<Value, E>(
 	queue: DispatchQueue? = nil,
 	timeout: DispatchTime? = nil,
 	_ block: @escaping AsyncAwait.ClosureCallback<Result<Value, E>>
-) -> Result<Value, AsyncAwait.Error<E>> {
+) -> Result<Value, E> {
 	return Await<Value,E>(blockQueue: queue, timeout: timeout).run(block)
 }
 

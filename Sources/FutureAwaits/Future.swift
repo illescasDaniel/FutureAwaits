@@ -22,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import class Foundation.NSLock
 import enum Swift.Result
 import class Dispatch.DispatchQueue
 import struct Dispatch.DispatchTime
@@ -34,12 +33,10 @@ public class Future<ValueType, ErrorType: Error> {
 
 	private let _futureQueue = DispatchQueue(label: "_futureQueue_", qos: .utility)
 	
-	public typealias FutureResult = Result<ValueType, AsyncAwait.Error<ErrorType>>
+	public typealias FutureResult = Result<ValueType, ErrorType>
 	
 	private let resultBuilder: () -> FutureResult
 	private var cachedResult: FutureResult?
-	// Locker to avoid double call on resultBuilder if calling onSuccess and onFailure very quickcly
-	private let locker = NSLock()
 	
 	public init(_ resultBuilder: @escaping @autoclosure () -> FutureResult) {
 		self.resultBuilder = resultBuilder
@@ -100,39 +97,16 @@ public class Future<ValueType, ErrorType: Error> {
 				case .success(let value2):
 					completion(.success(value2))
 				case .failure(let error1):
-					switch error1 {
-					case .error(let error2):
-						completion(.failure(error2))
-					case .noResult:
-						completion(.failure(AsyncAwait.Error<Error>.noResult))
-					case .timedOut:
-						completion(.failure(AsyncAwait.Error<Error>.timedOut))
-					}
+					completion(.failure(error1))
 				}
 			case .failure(let error1):
-				switch error1 {
-				case .error(let error2):
-					completion(.failure(error2))
-				case .noResult:
-					completion(.failure(AsyncAwait.Error<Error>.noResult))
-				case .timedOut:
-					completion(.failure(AsyncAwait.Error<Error>.timedOut))
-				}
+				completion(.failure(error1))
 			}
 		})
 	}
 	
 	public func mapError<NewFailure>(_ transform: @escaping (ErrorType) -> NewFailure) -> Future<ValueType, NewFailure> {
-		return Future<ValueType, NewFailure>(self.syncResult.mapError { asyncAwaitError in
-			switch asyncAwaitError {
-			case .noResult:
-				return AsyncAwait.Error.noResult
-			case .timedOut:
-				return AsyncAwait.Error.timedOut
-			case .error(let error):
-				return AsyncAwait.Error.error(transform(error))
-			}
-		})
+		return Future<ValueType, NewFailure>(self.syncResult.mapError(transform))
 	}
 	
 	@discardableResult
@@ -147,22 +121,11 @@ public class Future<ValueType, ErrorType: Error> {
 	/// Called on ANY error (time outs of the await function or custom errors)
 	@discardableResult
 	public func onFailure(_
-		completionHandler: @escaping (AsyncAwait.Error<ErrorType>) -> Void
+		completionHandler: @escaping (ErrorType) -> Void
 	) -> Future {
 		return self.then { result in
 			if case .failure(let errorValue) = result {
 				completionHandler(errorValue)
-			}
-		}
-	}
-	
-	@discardableResult
-	public func onError(_
-		completionHandler: @escaping (ErrorType) -> Void
-	) -> Future {
-		return self.then { result in
-			if case .failure(let errorValue) = result, case .error(let error) = errorValue {
-				completionHandler(error)
 			}
 		}
 	}
