@@ -114,7 +114,7 @@ Futures.combine(
 
 - Creating a synchrounous `Result` with the `await` function (which is a helper function for the `Await` struct):
 ```swift
-func somethingAsync() -> Result<Int, AsyncAwait.Error<Test>> {
+func somethingAsync() -> Result<Int, Test> {
     return await { completion in
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
             let retrievedValue = 23
@@ -144,7 +144,7 @@ async {
         { self.somethingAsync() }
     ).onSuccess { results in // results is an array of values
         print(results)
-    }.onError { error in
+    }.onFailure { error in
         print(error)
     }
 }
@@ -159,7 +159,7 @@ async {
         somethingAsync()
     ).onSuccess { results in // results is a TUPLE of values
         print(results)
-    }.onError { error in
+    }.onFailure { error in
         print(error)
     }
 }
